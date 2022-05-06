@@ -93,7 +93,7 @@ async def chosen_inline_handler(chosen_inline: types.ChosenInlineResult) -> None
         await bot.edit_message_text(
             text = TEXTS["inline"]["processed"].format(
                 dc_id = dc_id,
-                user_id = chosen_inline.from_user.id,
+                user_id = pid,
                 message_id = "{:,}".format(message_id)
             ),
             inline_message_id = inline_message_id
