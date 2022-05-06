@@ -29,7 +29,7 @@ def resolve_inline_message_id(inline_message_id: str) -> Tuple[int, int, int, in
     if len(inline_message_id) == ID32_FORMAT_SIZE:
         dc_id, message_id, pid, access_hash = unpack('<iiiq', decode_telegram_base64(inline_message_id))
     else:
-        dc_id, message_id, pid, access_hash = unpack('<iqiq', decode_telegram_base64(inline_message_id))
+        dc_id, pid, message_id, access_hash = unpack('<iqiq', decode_telegram_base64(inline_message_id))
 
     return dc_id, message_id, pid, access_hash
 
