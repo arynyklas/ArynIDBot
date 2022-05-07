@@ -75,7 +75,7 @@ async def chosen_inline_handler(chosen_inline: types.ChosenInlineResult) -> None
         )
 
     except:
-        logger.error(
+        logger.exception(
             msg = "resolving error",
             inline_message_id = inline_message_id
         )
@@ -100,7 +100,7 @@ async def chosen_inline_handler(chosen_inline: types.ChosenInlineResult) -> None
         )
 
     except:
-        logger.error(
+        logger.exception(
             msg = "resolving error (2)",
             inline_message_id = inline_message_id
         )
