@@ -3,11 +3,12 @@ from struct import unpack
 
 import logging, datetime, os
 
-from typing import Any, Tuple
+from typing import Tuple
 
 
 ID32_FORMAT_SIZE: int = 27
 ID64_FORMAT_SIZE: int = 32
+
 
 _log_prefix: str = "inline_message_id"
 _log_level: int = logging.DEBUG
@@ -32,6 +33,17 @@ def resolve_inline_message_id(inline_message_id: str) -> Tuple[int, int, int, in
         dc_id, pid, message_id, access_hash = unpack('<iqiq', decode_telegram_base64(inline_message_id))
 
     return dc_id, message_id, pid, access_hash
+
+
+def parse_chat_id(chat_id: int) -> Tuple[bool, int]:
+    is_channel: bool = chat_id < 0
+
+    chat_id_: int = 0
+
+    if is_channel:
+        chat_id_ = chat_id * -1
+
+    return (is_channel, chat_id_)
 
 
 class CustomAdapter(logging.LoggerAdapter):

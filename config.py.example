@@ -23,6 +23,7 @@ TEXTS: dict = {
         "processing": "Processing...",
         "process_error": "Error with your request - {inline_message_id}",
         "markup": "wait",
-        "processed": "DC ID: <code>{dc_id}</code>\nUser ID: <code>{user_id}</code>\nMessage ID: <code>{message_id}</code>"
+        "processed": "DC ID: <code>{dc_id}</code>\nUser ID: <code>{user_id}</code>\nMessage ID: <code>{message_id}</code>",
+        "processed_url": "DC ID: <code>{dc_id}</code>\nChat ID: <code>{user_id}</code>\nMessage ID: <code>{message_id}</code> (<a href=\"https://t.me/c/{chat_id}/{raw_message_id}\">link</a>)"
     }
 }

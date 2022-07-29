@@ -1,7 +1,7 @@
 from aiogram import Bot, Dispatcher, types, exceptions, executor
 
 from filters import IsGroupJoin
-from utils import resolve_inline_message_id, get_logger
+from utils import resolve_inline_message_id, get_logger, parse_chat_id
 
 from logging import LoggerAdapter
 
@@ -90,12 +90,34 @@ async def chosen_inline_handler(chosen_inline: types.ChosenInlineResult) -> None
         return
 
     try:
-        await bot.edit_message_text(
+        logger.warning(f"{inline_message_id} {dc_id} {message_id} {pid} {access_hash}")
+        is_channel: bool
+        chat_id: int
+
+        is_channel, chat_id = parse_chat_id(
+            chat_id = pid
+        )
+
+        text: str
+
+        if is_channel:
+            text = TEXTS["inline"]["processed_url"].format(
+                dc_id = dc_id,
+                user_id = pid,
+                message_id = "{:,}".format(message_id),
+                chat_id = chat_id,
+                raw_message_id = message_id
+            )
+
+        else:
             text = TEXTS["inline"]["processed"].format(
                 dc_id = dc_id,
                 user_id = pid,
                 message_id = "{:,}".format(message_id)
-            ),
+            )
+
+        await bot.edit_message_text(
+            text = text,
             inline_message_id = inline_message_id
         )
 
