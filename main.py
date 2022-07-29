@@ -90,7 +90,6 @@ async def chosen_inline_handler(chosen_inline: types.ChosenInlineResult) -> None
         return
 
     try:
-        logger.warning(f"{inline_message_id} {dc_id} {message_id} {pid} {access_hash}")
         is_channel: bool
         chat_id: int
 
