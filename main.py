@@ -318,7 +318,7 @@ async def rating_updater() -> None:
                 TEXTS.rating.record.format(
                     place = place,
                     user_id = user.user_id,
-                    score = user.score
+                    score = "{:,}".format(user.score)
                 )
                 for place, user in enumerate(
                     await User.find_all().sort([
