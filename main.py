@@ -1,87 +1,95 @@
-from aiogram import Bot, Dispatcher, types, exceptions, executor
-
-from filters import IsGroupJoin
-from utils import resolve_inline_message_id, get_logger, parse_chat_id
+from aiogram import Router, Bot, Dispatcher, types, enums, F, filters, exceptions
 
 from logging import LoggerAdapter
+from asyncio import sleep, create_task, run as asyncio_run
 
-from config import BOT_TOKEN, BOT_NAME, TEXTS
+from db import User, init_db
+from basic_data import TEXTS
+from config import config
 
-from typing import List
+import utils
+
+from typing import Union
 
 
-logger: LoggerAdapter = get_logger(
-    name = BOT_NAME
+logger: LoggerAdapter = utils.get_logger(
+    name = config.db.name
 )
 
 
-bot: Bot = Bot(
-    token = BOT_TOKEN,
-    parse_mode = types.ParseMode.HTML
-)
-
-dp: Dispatcher = Dispatcher(
-    bot = bot
-)
+router: Router = Router()
 
 
-dp.filters_factory.bind(
-    callback = IsGroupJoin,
-    event_handlers = [
-        dp.my_chat_member_handlers
+inline_markup: types.InlineKeyboardMarkup = types.InlineKeyboardMarkup(
+    inline_keyboard = [
+        [
+            types.InlineKeyboardButton(
+                text = TEXTS.inline.markup,
+                callback_data = "null"
+            )
+        ]
     ]
 )
 
 
-inline_markup: types.InlineKeyboardMarkup = types.InlineKeyboardMarkup()
+RATING_TEXT: str
 
-inline_markup.add(
-    types.InlineKeyboardButton(
-        text = TEXTS["inline"]["markup"],
-        callback_data = "0"
-    )
-)
+CAN_STARTUP: bool = False
 
 
-@dp.inline_handler()
-async def inline_handler(inline_query: types.InlineQuery) -> None:
+@router.inline_query()
+async def inline_query_handler(inline_query: types.InlineQuery) -> None:
     await inline_query.answer(
         results = [
             types.InlineQueryResultArticle(
                 id = str(inline_query.id),
-                title = TEXTS["inline"]["title"],
+                title = TEXTS.inline.title,
                 input_message_content = types.InputTextMessageContent(
-                    message_text = TEXTS["inline"]["processing"]
+                    message_text = TEXTS.inline.processing
                 ),
                 reply_markup = inline_markup
             )
         ],
-        cache_time = 31
+        cache_time = config.inline_cache_time
     )
 
 
-@dp.chosen_inline_handler()
-async def chosen_inline_handler(chosen_inline: types.ChosenInlineResult) -> None:
+async def update_user_score(user_id: int, score: int) -> None:
+    user: Union[User, None] = await User.find_one(
+        User.user_id == user_id
+    )
+
+    if not user:
+        user = User(
+            user_id = user_id
+        )
+
+    if not user.score or (user.score and score > user.score):
+        user.score = score
+        await user.save()
+
+
+@router.chosen_inline_result()
+async def chosen_inline_result_handler(chosen_inline: types.ChosenInlineResult) -> None:
     dc_id: int
     message_id: int
-    pid: int
-    access_hash: int
+    chat_id: int
 
     inline_message_id: str = chosen_inline.inline_message_id
 
     try:
-        dc_id, message_id, pid, access_hash = resolve_inline_message_id(
+        dc_id, message_id, chat_id, _ = utils.resolve_inline_message_id(
             inline_message_id = inline_message_id
         )
 
     except:
         logger.exception(
-            msg = "resolving error",
+            msg = "resolving error (1)",
             inline_message_id = inline_message_id
         )
 
-        await bot.edit_message_text(
-            text = TEXTS["inline"]["process_error"].format(
+        await chosen_inline.bot.edit_message_text(
+            text = TEXTS.inline.process_error.format(
                 inline_message_id = inline_message_id
             ),
             inline_message_id = inline_message_id
@@ -90,32 +98,30 @@ async def chosen_inline_handler(chosen_inline: types.ChosenInlineResult) -> None
         return
 
     try:
-        is_channel: bool
-        chat_id: int
+        is_chat: bool
 
-        is_channel, chat_id = parse_chat_id(
-            chat_id = pid
+        is_chat, chat_id = utils.parse_chat_id(
+            chat_id = chat_id
         )
 
         text: str
 
-        if is_channel:
-            text = TEXTS["inline"]["processed_url"].format(
+        if is_chat:
+            text = TEXTS.inline.processed_url.format(
                 dc_id = dc_id,
-                user_id = pid,
-                message_id = "{:,}".format(message_id),
                 chat_id = chat_id,
+                message_id = "{:,}".format(message_id),
                 raw_message_id = message_id
             )
 
         else:
-            text = TEXTS["inline"]["processed"].format(
+            text = TEXTS.inline.processed.format(
                 dc_id = dc_id,
-                user_id = pid,
+                user_id = chat_id,
                 message_id = "{:,}".format(message_id)
             )
 
-        await bot.edit_message_text(
+        await chosen_inline.bot.edit_message_text(
             text = text,
             inline_message_id = inline_message_id
         )
@@ -126,39 +132,55 @@ async def chosen_inline_handler(chosen_inline: types.ChosenInlineResult) -> None
             inline_message_id = inline_message_id
         )
 
-        await bot.edit_message_text(
-            text = TEXTS["inline"]["process_error"].format(
+        await chosen_inline.bot.edit_message_text(
+            text = TEXTS.inline.process_error.format(
                 inline_message_id = inline_message_id
             ),
             inline_message_id = inline_message_id
         )
 
+        return
 
-@dp.callback_query_handler()
+    if not is_chat:
+        await update_user_score(
+            user_id = chosen_inline.from_user.id,
+            score = message_id
+        )
+
+
+@router.callback_query()
 async def callback_query_handler(callback_query: types.CallbackQuery) -> None:
     await callback_query.answer()
 
 
-@dp.message_handler(chat_type=types.ChatType.PRIVATE, commands=["start"])
-async def start_command_handler(message: types.Message):
+@router.message(F.chat.type == enums.ChatType.PRIVATE, filters.Command("start"))
+async def start_command_handler(message: types.Message) -> None:
     await message.answer(
-        text = TEXTS["start"].format(
-            user_id = message.chat.id
+        text = TEXTS.start.format(
+            user_id = message.chat.id,
+            rating_text = RATING_TEXT
         )
     )
 
 
-@dp.message_handler(commands=["id"])
-async def id_command_handler(message: types.Message):
+@router.message(filters.Command("top"))
+async def top_command_handler(message: types.Message) -> None:
+    await message.answer(
+        text = RATING_TEXT
+    )
+
+
+@router.message(filters.Command("id"))
+async def id_command_handler(message: types.Message) -> None:
     text: str
 
     if message.chat.id == message.from_user.id:
-        text = TEXTS["id"]["pm"].format(
+        text = TEXTS.id.pm.format(
             user_id = message.from_user.id
         )
 
     else:
-        text = TEXTS["id"]["not_pm"].format(
+        text = TEXTS.id.not_pm.format(
             chat_type = message.chat.type,
             chat_id = message.chat.id
         )
@@ -168,21 +190,21 @@ async def id_command_handler(message: types.Message):
     )
 
 
-@dp.message_handler(commands="help")
-async def help_command_handler(message: types.Message):
+@router.message(filters.Command("help"))
+async def help_command_handler(message: types.Message) -> None:
     await message.answer(
-        text = TEXTS["help"]
+        text = TEXTS.help
     )
 
 
-@dp.message_handler(lambda message: message.forward_from_chat, content_types=types.ContentTypes.ANY)
-async def forwarded_message_handler(message: types.Message):
-    text: str = TEXTS["id"]["chat_forwarded"].format(
+@router.message(F.forward_from_chat.is_not(None), F.chat.type == enums.ContentType.ANY)
+async def forwarded_message_handler(message: types.Message) -> None:
+    text: str = TEXTS.id.chat_forwarded.format(
         chat_id = message.forward_from_chat.id
     )
 
     if message.sticker:
-        text += TEXTS["id"]["sticker"].format(
+        text += TEXTS.id.sticker.format(
             sticker_file_id = message.sticker.file_id
         )
 
@@ -191,22 +213,22 @@ async def forwarded_message_handler(message: types.Message):
     )
 
 
-@dp.message_handler(lambda message: message.forward_from, content_types=types.ContentTypes.ANY)
-async def get_user_id_no_privacy(message: types.Message):
+@router.message(F.forward_from.is_not(None), F.chat.type == enums.ContentType.ANY)
+async def get_user_id_no_privacy(message: types.Message) -> None:
     text: str
 
     if message.forward_from.is_bot:
-        text = TEXTS["id"]["hide"]["bot"].format(
+        text = TEXTS.id.hide.not_.bot.format(
             user_id = message.forward_from.id
         )
 
     else:
-        text = TEXTS["id"]["not_hide"]["user"].format(
+        text = TEXTS.id.hide.not_.user.format(
             user_id = message.from_user.id
         )
 
     if message.sticker:
-        text += TEXTS["id"]["sticker"].format(
+        text += TEXTS.id.sticker.format(
             sticker_file_id = message.sticker.file_id
         )
 
@@ -215,12 +237,12 @@ async def get_user_id_no_privacy(message: types.Message):
     )
 
 
-@dp.message_handler(lambda message: message.forward_sender_name, content_types=types.ContentTypes.ANY)
-async def get_user_id_with_privacy(message: types.Message):
-    text: str = TEXTS["id"]["hide"]
+@router.message(F.forward_sender_name.is_not(None), F.chat.type == enums.ContentType.ANY)
+async def get_user_id_with_privacy(message: types.Message) -> None:
+    text: str = TEXTS.id.hide
 
     if message.sticker:
-        text += TEXTS["id"]["sticker"].format(
+        text += TEXTS.id.sticker.format(
             sticker_file_id = message.sticker.file_id
         )
 
@@ -229,36 +251,40 @@ async def get_user_id_with_privacy(message: types.Message):
     )
 
 
-@dp.my_chat_member_handler(is_group_join=True)
-async def new_chat(update: types.ChatMemberUpdated):
+@router.my_chat_member(
+    F.old_chat_member.status.in_([enums.ChatMemberStatus.KICKED, enums.ChatMemberStatus.LEFT]),
+    F.new_chat_member.status.in_([enums.ChatMemberStatus.MEMBER, enums.ChatMemberStatus.ADMINISTRATOR]),
+    F.chat.typw.in_([enums.ChatType.GROUP, enums.ChatType.SUPERGROUP])
+)
+async def my_chat_member_handler(update: types.ChatMemberUpdated) -> None:
     await update.bot.send_message(
         chat_id = update.chat.id,
-        text = TEXTS["id"]["join"].format(
+        text = TEXTS.id.join.format(
             chat_type = update.chat.type,
             chat_id = update.chat.id
         )
     )
 
 
-@dp.message_handler(content_types=["migrate_to_chat_id"])
-async def group_upgrade_to(message: types.Message):
-    await bot.send_message(
+@router.message(F.content_type == enums.ContentType.MIGRATE_TO_CHAT_ID)
+async def migrate_to_chat_id_handler(message: types.Message) -> None:
+    await message.bot.send_message(
         chat_id = message.migrate_to_chat_id,
-        text = TEXTS["id"]["migrated"].format(
+        text = TEXTS.id.migrated.format(
             chat_id = message.chat.id,
             migrated_chat_id = message.migrate_to_chat_id
         )
     )
 
 
-@dp.message_handler(chat_type=types.ChatType.PRIVATE, content_types=types.ContentTypes.ANY)
-async def private_chat(message: types.Message):
-    text: str = TEXTS["id"]["pm"].format(
+@router.message(F.chat.type == enums.ChatType.PRIVATE, F.content_type == enums.ContentType.ANY)
+async def message_private_chat_handler(message: types.Message) -> None:
+    text: str = TEXTS.id.pm.format(
         user_id = message.chat.id
     )
 
     if message.sticker:
-        text += TEXTS["id"]["sticker"].format(
+        text += TEXTS.id.sticker.format(
             sticker_file_id = message.sticker.file_id
         )
 
@@ -267,42 +293,78 @@ async def private_chat(message: types.Message):
     )
 
 
-@dp.errors_handler(exception=exceptions.TelegramAPIError)
-async def errors_handler(update: types.Update, exception: exceptions.TelegramAPIError):
-    return True
+@router.error(exceptions.TelegramAPIError)
+async def telegram_errors_handler(event: types.ErrorEvent) -> None:
+    pass
 
 
-@dp.errors_handler(exception=Exception)
-async def errors_handler(update: types.Update, exception: exceptions.TelegramAPIError):
+@router.error()
+async def all_errors_handler(event: types.ErrorEvent) -> None:
     logger.exception(
         msg = "error occured: {update}".format(
-            update = update.as_json()
+            update = event.update.model_dump_json()
         )
     )
 
-    return True
 
+async def rating_updater() -> None:
+    global RATING_TEXT, CAN_STARTUP
 
-async def on_startup(dp: Dispatcher):
-    bot_commands: List[types.BotCommand] = [
-        types.BotCommand(
-            command = "/id",
-            description = "Tell your ID or group's ID"
-        ),
-        types.BotCommand(
-            command = "/help",
-            description = "Help"
+    while True:
+        start_time: int = utils.get_timestamp()
+
+        RATING_TEXT = TEXTS.rating.default.format(
+            rating_records = "\n".join([
+                TEXTS.rating.record.format(
+                    user_id = user.user_id,
+                    score = user.score
+                )
+                for user in await User.find_all().sort([
+                    (User.score, -1)
+                ]).to_list()
+            ])
         )
-    ]
 
-    await bot.set_my_commands(
-        commands = bot_commands
+        if not CAN_STARTUP:
+            CAN_STARTUP = True
+
+        sleep_time: int = config.rating_update_seconds - (utils.get_timestamp() - start_time)
+
+        if sleep_time > 0:
+            await sleep(sleep_time)
+
+
+@router.startup()
+async def startup_handler() -> None:
+    await init_db(
+        db_uri = config.db.url,
+        db_name = config.db.name
+    )
+
+    create_task(
+        coro = rating_updater()
+    )
+
+    while not CAN_STARTUP:
+        await sleep(1)
+
+
+async def main() -> None:
+    dp: Dispatcher = Dispatcher()
+
+    dp.include_router(
+        router = router
+    )
+
+    bot: Bot = Bot(
+        token = config.bot_token,
+        parse_mode = enums.ParseMode.HTML
+    )
+
+    await dp.start_polling(
+        bot
     )
 
 
 if __name__ == "__main__":
-    executor.start_polling(
-        dispatcher = dp,
-        skip_updates = False,
-        on_startup = on_startup
-    )
+    asyncio_run(main())

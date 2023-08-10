@@ -1,7 +1,10 @@
 from base64 import urlsafe_b64decode
 from struct import unpack
+from datetime import datetime
+from os import listdir, mkdir
+from time import time
 
-import logging, datetime, os
+import logging
 
 from typing import Tuple
 
@@ -17,51 +20,61 @@ _log_format: str = "%(asctime)s - [%(levelname)s] - %(name)s - (%(filename)s).(%
 _log_dir: str = "logs"
 
 
-def decode_telegram_base64(string):
-    return urlsafe_b64decode(string + '=' * (len(string) % 4))
+def decode_response_base64(string: str) -> bytes:
+    return urlsafe_b64decode(string + ("=" * (len(string) % 4)))
 
 
 def resolve_inline_message_id(inline_message_id: str) -> Tuple[int, int, int, int]:
     dc_id: int
     message_id: int
-    pid: int
+    chat_id: int
     access_hash: int
 
-    if len(inline_message_id) == ID32_FORMAT_SIZE:
-        dc_id, message_id, pid, access_hash = unpack('<iiiq', decode_telegram_base64(inline_message_id))
-    else:
-        dc_id, pid, message_id, access_hash = unpack('<iqiq', decode_telegram_base64(inline_message_id))
+    decoded_response: bytes = decode_response_base64(
+        string = inline_message_id
+    )
 
-    return dc_id, message_id, pid, access_hash
+    if len(inline_message_id) == ID32_FORMAT_SIZE:
+        dc_id, message_id, chat_id, access_hash = unpack("<iiiq", decoded_response)
+    else:
+        dc_id, chat_id, message_id, access_hash = unpack("<iqiq", decoded_response)
+
+    return (
+        dc_id,
+        message_id,
+        chat_id,
+        access_hash
+    )
 
 
 def parse_chat_id(chat_id: int) -> Tuple[bool, int]:
-    is_channel: bool = chat_id < 0
+    is_chat: bool = chat_id < 0
+    chat_id_: int
 
-    chat_id_: int = 0
-
-    if is_channel:
+    if is_chat:
         chat_id_ = chat_id * -1
+    else:
+        chat_id_ = chat_id
 
-    return (is_channel, chat_id_)
+    return (
+        is_chat,
+        chat_id_
+    )
 
 
 class CustomAdapter(logging.LoggerAdapter):
-    def process(self, message: str, kwargs: dict) -> Tuple[str, dict]:
+    def process(self, message: str, extra: dict) -> Tuple[str, dict]:
         return (
             "[{key}] {message}".format(
-                key = kwargs.pop(
-                    _log_prefix,
-                    self.extra[_log_prefix]
-                ),
+                key = extra.pop(_log_prefix, ""),
                 message = message
             ),
-            kwargs
+            extra
         )
 
 
 def get_file_handler() -> logging.FileHandler:
-    date: datetime.datetime = datetime.datetime.now()
+    date: datetime = datetime.now()
 
     file_handler: logging.FileHandler = logging.FileHandler(
         filename = "{dir}/{hours}.{minute}.{second} {day}.{month}.{year}.log".format(
@@ -114,8 +127,8 @@ def get_logger(name: str) -> logging.LoggerAdapter:
         level = _log_level
     )
 
-    if _log_dir not in os.listdir():
-        os.mkdir(_log_dir)
+    if _log_dir not in listdir():
+        mkdir(_log_dir)
 
     logger.addHandler(
         hdlr = get_file_handler()
@@ -133,3 +146,7 @@ def get_logger(name: str) -> logging.LoggerAdapter:
     )
 
     return logger
+
+
+def get_timestamp() -> int:
+    return int(time())

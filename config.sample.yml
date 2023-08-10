@@ -1,0 +1,6 @@
+bot_token: 
+db:
+  url: 
+  name: 
+inline_cache_time: 3600
+rating_update_seconds: 10
