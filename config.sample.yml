@@ -4,3 +4,4 @@ db:
   name: 
 inline_cache_time: 3600
 rating_update_seconds: 10
+rating_records_limit: 10

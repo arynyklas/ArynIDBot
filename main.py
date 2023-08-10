@@ -316,12 +316,16 @@ async def rating_updater() -> None:
         RATING_TEXT = TEXTS.rating.default.format(
             rating_records = "\n".join([
                 TEXTS.rating.record.format(
+                    place = place,
                     user_id = user.user_id,
                     score = user.score
                 )
-                for user in await User.find_all().sort([
-                    (User.score, -1)
-                ]).to_list()
+                for place, user in enumerate(
+                    await User.find_all().sort([
+                        (User.score, -1)
+                    ]).limit(config.rating_records_limit).to_list(),
+                    start = 1
+                )
             ])
         )
 

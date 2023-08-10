@@ -18,6 +18,7 @@ class Config(BaseModel):
     db: DBConfig
     inline_cache_time: int
     rating_update_seconds: int
+    rating_records_limit: int
 
 
 with CONFIG_FILEPATH.open("r", encoding=ENCODING) as file:

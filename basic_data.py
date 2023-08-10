@@ -28,4 +28,4 @@ class TEXTS:
 
     class rating:
         default: str = "Users' rating by message id:\n{rating_records}"
-        record: str = "<code>{user_id}</code> — <i>{score}</i>"
+        record: str = "<i>{place}</i>. <code>{user_id}</code> — <i>{score}</i>"
