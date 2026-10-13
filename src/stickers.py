@@ -1,20 +1,6 @@
-"""Sticker set owners and Bot API file ids, read from the documents themselves."""
-
-import base64
-import struct
+"""Owners of sticker and custom emoji sets, read from the documents themselves."""
 
 from telethon.tl import types
-from telethon.tl.tlobject import TLObject
-
-# tdlib's persistent file id: `FileType::Sticker`, the flag telling that a file
-# reference follows the DC, and the version bytes appended after the encoding.
-# Sub-version 61 is what the Bot API stamped on sticker file ids in October 2026.
-_STICKER_FILE_TYPE = 8
-_FILE_REFERENCE_FLAG = 1 << 25
-_PERSISTENT_ID_SUBVERSION = 61
-_PERSISTENT_ID_VERSION = 4
-# tdlib's `zero_encode` caps one run of zero bytes at this many.
-_MAX_ZERO_RUN = 250
 
 
 def decode_set_id(set_id: int) -> tuple[int, int]:
@@ -52,48 +38,3 @@ def sticker_set_id(document: types.TypeDocument | None) -> int | None:
             return attribute.stickerset.id
 
     return None
-
-
-def _zero_encode(data: bytes) -> bytes:
-    """tdlib's `zero_encode`: each run of zero bytes becomes a zero and the run length."""
-    out = bytearray()
-    index = 0
-
-    while index < len(data):
-        byte = data[index]
-        out.append(byte)
-        index += 1
-
-        if byte == 0:
-            run = 1
-
-            while run < _MAX_ZERO_RUN and index < len(data) and data[index] == 0:
-                run += 1
-                index += 1
-
-            out.append(run)
-
-    return bytes(out)
-
-
-def sticker_file_id(document: types.Document) -> str:
-    """The Bot API `file_id` of a sticker document, as tdlib would encode it."""
-    file_type = _STICKER_FILE_TYPE
-    reference = b""
-
-    if document.file_reference:
-        file_type |= _FILE_REFERENCE_FLAG
-        reference = TLObject.serialize_bytes(document.file_reference)
-
-    location = b"".join(
-        (
-            struct.pack("<ii", file_type, document.dc_id),
-            reference,
-            struct.pack("<qq", document.id, document.access_hash),
-        )
-    )
-    encoded = _zero_encode(location) + bytes(
-        (_PERSISTENT_ID_SUBVERSION, _PERSISTENT_ID_VERSION)
-    )
-
-    return base64.urlsafe_b64encode(encoded).rstrip(b"=").decode("ascii")

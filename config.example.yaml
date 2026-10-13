@@ -24,6 +24,8 @@ limits:
   user_interval: 2.0
   chat_burst: 3
   chat_interval: 3.0
+  inline_burst: 20
+  inline_interval: 0.5
   voice_probes: 4
   voice_probe_timeout: 20.0
 

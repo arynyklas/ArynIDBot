@@ -5,8 +5,7 @@ HELP = (
     "Use this bot to get IDs of different entities across Telegram:\n"
     "• Forward a message from a channel to get the channel's ID;\n"
     "• Forward a message from a user to get their ID (unless they hide it);\n"
-    "• Send a sticker or custom emoji to get its pack owner's ID "
-    "(and the sticker's file_id, usable with any bot);\n"
+    "• Send a sticker or custom emoji to get its pack owner's ID;\n"
     "• Send a voice message to see which app recorded it;\n"
     "• Send a photo, video or file to see which DC stores it;\n"
     "• Add the bot to a group to get the group's ID "
@@ -41,7 +40,6 @@ EMOJI_OWNER = (
     "This custom emoji pack's owner ID is <code>{owner_id}</code> "
     "(their pack #{set_number})"
 )
-STICKER_FILE_ID = "This sticker's file_id is <code>{file_id}</code>"
 VOICE_PLATFORM = "This voice message was recorded in {platform} (<code>{vendor}</code>)"
 VOICE_UNKNOWN = (
     "This voice message was recorded by an unknown app (<code>{vendor}</code>)"

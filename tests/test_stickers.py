@@ -1,7 +1,7 @@
 import pytest
 from telethon.tl import types
 
-from src.stickers import decode_set_id, sticker_file_id, sticker_set_id
+from src.stickers import decode_set_id, sticker_set_id
 
 
 def _modern_set_id(owner_id: int, set_number: int) -> int:
@@ -80,21 +80,3 @@ def test_the_set_id_is_read_off_the_document(attribute):
 )
 def test_documents_without_a_set_id_have_none(document):
     assert sticker_set_id(document) is None
-
-
-def test_the_file_id_matches_what_the_bot_api_issues():
-    """A sticker of the HotCherry pack, as the Bot API's getStickerSet listed it."""
-    document = types.Document(
-        id=1391391008142393345,
-        access_hash=5849401495508954648,
-        file_reference=bytes.fromhex("006acea8b2e8d0403982f43963679830d1e2b90d84"),
-        date=None,
-        mime_type="application/x-tgsticker",
-        size=1,
-        dc_id=2,
-        attributes=[],
-    )
-
-    assert sticker_file_id(document) == (
-        "CAACAgIAAxUAAWrOqLLo0EA5gvQ5Y2eYMNHiuQ2EAAIBAAPANk8TGC5zMKs_LVE9BA"
-    )

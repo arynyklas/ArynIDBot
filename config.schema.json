@@ -105,7 +105,7 @@
       "type": "object",
       "properties": {
         "user_burst": {
-          "description": "Requests one user may make back to back: messages (an album counts once), commands, chosen inline results and button presses. Inline queries are free.",
+          "description": "Requests one user may make back to back: messages (an album counts once), commands, chosen inline results and button presses. Inline queries have a budget of their own.",
           "type": "integer",
           "minimum": 1,
           "default": 8
@@ -127,6 +127,18 @@
           "type": "number",
           "exclusiveMinimum": 0,
           "default": 3.0
+        },
+        "inline_burst": {
+          "description": "Inline queries one user may send back to back. Clients send one per keystroke, and Telegram answers a repeated query text from its cache without asking the bot.",
+          "type": "integer",
+          "minimum": 1,
+          "default": 20
+        },
+        "inline_interval": {
+          "description": "Seconds for a user to earn one inline query back. A query over budget gets no answer, so the client shows no results.",
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "default": 0.5
         },
         "voice_probes": {
           "description": "Voice messages whose first 4 KiB are downloaded at once, across all users.",

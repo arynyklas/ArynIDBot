@@ -48,6 +48,10 @@ def build_client(cfg: BotConfig, logger: Logger) -> TelegramClient:
         # raises a bare `ValueError`, which escapes every `RPCError` handler;
         # this raises the last `RPCError` instead.
         raise_last_call_error=True,
+        # Answer what arrived while the bot was down. Telethon saves the update
+        # state on disconnect and every minute, so only an unclean kill makes it
+        # handle up to a minute of updates a second time.
+        catch_up=True,
         # Telethon's own loggers become children of this name, which
         # `get_logger` levels separately from ours.
         base_logger=f"{logger.name}.{constants.TELETHON_LOGGER_CHILD}",

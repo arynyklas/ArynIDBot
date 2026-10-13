@@ -93,13 +93,17 @@ class LimitsConfig:
     """Flood protection: request budgets per user and per group, and the voice probe budget."""
 
     user_burst: Annotated[int, V >= 1] = 8
-    """Requests one user may make back to back: messages (an album counts once), commands, chosen inline results and button presses. Inline queries are free."""
+    """Requests one user may make back to back: messages (an album counts once), commands, chosen inline results and button presses. Inline queries have a budget of their own."""
     user_interval: Annotated[float, V > 0] = 2.0
     """Seconds for a user to earn one request back. A user over budget is told once when to retry, then ignored until then."""
     chat_burst: Annotated[int, V >= 1] = 3
     """Messages the bot may post to one group back to back."""
     chat_interval: Annotated[float, V > 0] = 3.0
     """Seconds for a group to earn one message back; over budget the bot stays silent there."""
+    inline_burst: Annotated[int, V >= 1] = 20
+    """Inline queries one user may send back to back. Clients send one per keystroke, and Telegram answers a repeated query text from its cache without asking the bot."""
+    inline_interval: Annotated[float, V > 0] = 0.5
+    """Seconds for a user to earn one inline query back. A query over budget gets no answer, so the client shows no results."""
     voice_probes: Annotated[int, V >= 1] = 4
     """Voice messages whose first 4 KiB are downloaded at once, across all users."""
     voice_probe_timeout: Annotated[float, V > 0] = 20.0

@@ -21,7 +21,7 @@ from src.describe import forward_origin, media_location
 from src.inline import inline_message_location
 from src.limiter import RateLimiter
 from src.rating import Rating
-from src.stickers import decode_set_id, sticker_file_id, sticker_set_id
+from src.stickers import decode_set_id, sticker_set_id
 from src.voice import opus_vendor, voice_platform
 
 # `/name` or `/name@bot`, followed by whitespace or the end of the text.
@@ -52,6 +52,9 @@ class IdBot:
         self._logger = logger
         self._users = RateLimiter(cfg.limits.user_burst, cfg.limits.user_interval)
         self._chats = RateLimiter(cfg.limits.chat_burst, cfg.limits.chat_interval)
+        self._inline_queries = RateLimiter(
+            cfg.limits.inline_burst, cfg.limits.inline_interval
+        )
         self._probes = asyncio.Semaphore(cfg.limits.voice_probes)
         self._vendors: LruCache[int, str] = LruCache(constants.CACHE_SIZE)
         self._emoji_sets: LruCache[int, int] = LruCache(constants.CACHE_SIZE)
@@ -233,8 +236,12 @@ class IdBot:
             await self._client.send_message(message.peer_id, text)
 
     async def _on_inline_query(self, event: events.InlineQuery.Event) -> None:
-        # Not rate limited: the answer is one cheap request, Telegram caches it,
-        # and clients send a query per keystroke.
+        # A budget of its own: clients send a query per keystroke, and each new
+        # query text reaches the bot. Over budget the query gets no answer, so
+        # the client shows no results; there is nothing to notify.
+        if not self._inline_queries.hit(cast("int", event.sender_id)).allowed:
+            return
+
         await event.answer(
             [
                 event.builder.article(
@@ -305,11 +312,6 @@ class IdBot:
                 owner_id, set_number = decode_set_id(set_id)
                 lines.append(
                     texts.STICKER_OWNER.format(owner_id=owner_id, set_number=set_number)
-                )
-
-            if message.sticker is not None:
-                lines.append(
-                    texts.STICKER_FILE_ID.format(file_id=sticker_file_id(document))
                 )
 
             if message.voice is not None:
