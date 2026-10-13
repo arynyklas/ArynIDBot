@@ -1,7 +1,7 @@
 """Update handlers of the bot."""
 
 import asyncio
-from collections.abc import Awaitable, Callable
+from collections.abc import Callable, Coroutine
 import functools
 import html
 from logging import Logger
@@ -28,7 +28,7 @@ from src.voice import opus_vendor, voice_platform
 _COMMAND = re.compile(r"/(?P<name>\w+)(?:@(?P<bot>\w+))?(?=\s|$)")
 _GROUP_COMMANDS = frozenset({"id", "help", "top"})
 
-type _Handler = Callable[[Any], Awaitable[None]]
+type _Handler = Callable[[Any], Coroutine[Any, Any, None]]
 
 
 def _chat_type(peer: types.TypePeer) -> str:
@@ -39,14 +39,14 @@ class IdBot:
     def __init__(
         self,
         client: TelegramClient,
-        me: types.User,
         cfg: Config,
         rating: Rating | None,
         logger: Logger,
     ) -> None:
         self._client = client
-        self._me = me
-        self._username = (me.username or "").casefold()
+        self._me_id = 0
+        self._username = ""
+        self._ready = asyncio.Event()
         self._cfg = cfg
         self._rating = rating
         self._logger = logger
@@ -65,6 +65,9 @@ class IdBot:
         """Set once a handler found the bot's authorization gone."""
 
     def register(self) -> None:
+        """Add the handlers. Call before the client connects: Telethon dispatches
+        the updates missed while the bot was down as soon as it does. They wait
+        for `activate`."""
         add = self._client.add_event_handler
 
         add(self._guard(self._on_message), events.NewMessage(incoming=True))
@@ -77,12 +80,19 @@ class IdBot:
         add(self._guard(self._on_inline_send), events.Raw(types.UpdateBotInlineSend))
         add(self._guard(self._on_callback), events.CallbackQuery())
 
+    def activate(self, me: types.User) -> None:
+        """Let the handlers run, now that the bot knows who it is."""
+        self._me_id = me.id
+        self._username = (me.username or "").casefold()
+        self._ready.set()
+
     def _guard(self, handler: _Handler) -> _Handler:
         name = getattr(handler, "__name__", repr(handler))
 
         @functools.wraps(handler)
         async def guarded(event: Any) -> None:  # noqa: ANN401
             try:
+                await self._ready.wait()
                 await handler(event)
 
             except AUTH_ERRORS as ex:
@@ -219,7 +229,7 @@ class IdBot:
             isinstance(
                 action, types.MessageActionChatAddUser | types.MessageActionChatCreate
             )
-            and self._me.id in action.users
+            and self._me_id in action.users
         ):
             text = texts.CHAT_ID.format(
                 chat_type=_chat_type(message.peer_id), chat_id=chat_id

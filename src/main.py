@@ -108,6 +108,9 @@ async def _run(cfg: Config, logger: Logger) -> int:
     rating = None if url is None else Rating(url, cfg.database, cfg.rating, logger)
 
     try:
+        bot = IdBot(client, cfg, rating, logger)
+        bot.register()
+
         # `start()` returns a coroutine when awaited from async code; the stub says otherwise.
         await cast(
             "Coroutine[Any, Any, TelegramClient]", client.start(bot_token=cfg.bot.token)
@@ -124,14 +127,13 @@ async def _run(cfg: Config, logger: Logger) -> int:
 
             return _EXIT_CONFIG
 
+        bot.activate(me)
+
         if rating is None:
             logger.info("database.url is not set, the rating is off")
 
         else:
             await rating.create_indexes()
-
-        bot = IdBot(client, me, cfg, rating, logger)
-        bot.register()
 
         logger.info("Started as @%s (%d)", me.username, me.id)
 
