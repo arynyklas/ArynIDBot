@@ -28,7 +28,7 @@ Send or forward anything to the bot in a private chat; it replies with what the 
 
 In groups the bot posts the group's ID when it is added and the old and new IDs when the group becomes a supergroup; `/id`, `/help` and `/top` work there too.
 
-Inline mode (`@ArynIDBot` in any chat) sends a message that the bot then edits to show its DC, its owner's ID and its message ID. In private chats the message ID counts the messages of the sender's account, which is what the `/top` rating (MongoDB) ranks.
+Inline mode (`@ArynIDBot` in any chat) sends a message that the bot then edits to show its DC, its owner's ID and its message ID. In private chats and basic groups the message lives in the sender's own message box, so its ID counts the messages of the sender's account: that is what the `/top` rating (MongoDB) ranks. Supergroups and channels number their messages themselves and get a link instead.
 
 ### Flood protection
 
