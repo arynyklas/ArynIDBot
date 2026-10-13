@@ -1,3 +1,0 @@
-git+https://github.com/arynyklas/aiogram/
-git+https://github.com/arynyklas/beanie/
-pydantic_settings == 2.0.2
