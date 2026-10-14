@@ -26,8 +26,8 @@ limits:
   chat_interval: 3.0
   inline_burst: 20
   inline_interval: 0.5
-  voice_probes: 4
-  voice_probe_timeout: 20.0
+  media_probes: 4
+  media_probe_timeout: 20.0
 
 logging:
   telethon_level: WARNING

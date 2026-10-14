@@ -1,4 +1,4 @@
-"""ArynIDBot: IDs of Telegram users, chats, messages, media DCs, sticker pack owners and voice apps."""
+"""ArynIDBot: IDs of Telegram users, chats, messages, media DCs, sticker pack owners, voice apps and photo platforms."""
 
 import argparse
 import asyncio

@@ -7,6 +7,7 @@ HELP = (
     "• Forward a message from a user to get their ID (unless they hide it);\n"
     "• Send a sticker or custom emoji to get its pack owner's ID;\n"
     "• Send a voice message to see which app recorded it;\n"
+    "• Send a photo to see which platform it was uploaded from;\n"
     "• Send a photo, video or file to see which DC stores it;\n"
     "• Add the bot to a group to get the group's ID "
     "(it will even tell you when you migrate from group to supergroup);\n"
@@ -45,6 +46,12 @@ VOICE_UNKNOWN = (
     "This voice message was recorded by an unknown app (<code>{vendor}</code>)"
 )
 VOICE_UNREADABLE = "Couldn't tell which app recorded this voice message"
+PHOTO_PLATFORM = "This photo was uploaded from {platform}"
+PHOTO_UNKNOWN = "Couldn't tell which platform this photo was uploaded from"
+ALBUM_PLATFORMS = "These photos were uploaded from {platforms}"
+ALBUM_UNKNOWN = "Couldn't tell which platform these photos were uploaded from"
+# Listed among the platforms of an album when some of its photos match none.
+UNKNOWN_PLATFORM = "an unknown platform"
 FILE_DC = "This {kind} is stored on DC <code>{dc_id}</code>"
 ALBUM_DC = "These files are stored on DC {dc_ids}"
 

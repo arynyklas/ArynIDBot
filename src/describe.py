@@ -1,5 +1,7 @@
 """What the bot can tell about a message without asking Telegram anything."""
 
+from collections.abc import Sequence
+
 from telethon import utils
 from telethon.tl import types
 
@@ -28,12 +30,22 @@ def document_kind(document: types.Document) -> str:
     return "file"
 
 
-def media_location(media: types.TypeMessageMedia | None) -> tuple[str, int] | None:
-    """`(kind, dc_id)` of the photo or document attached to a message."""
+def message_photo(media: types.TypeMessageMedia | None) -> types.Photo | None:
+    """The photo attached to a message, if any: link previews do not count."""
     if isinstance(media, types.MessageMediaPhoto) and isinstance(
         media.photo, types.Photo
     ):
-        return "photo", media.photo.dc_id
+        return media.photo
+
+    return None
+
+
+def media_location(media: types.TypeMessageMedia | None) -> tuple[str, int] | None:
+    """`(kind, dc_id)` of the photo or document attached to a message."""
+    photo = message_photo(media)
+
+    if photo is not None:
+        return "photo", photo.dc_id
 
     if isinstance(media, types.MessageMediaDocument) and isinstance(
         media.document, types.Document
@@ -41,6 +53,32 @@ def media_location(media: types.TypeMessageMedia | None) -> tuple[str, int] | No
         return document_kind(media.document), media.document.dc_id
 
     return None
+
+
+def photo_platform_line(platform: str | None) -> str:
+    """What to say about the platform one photo was uploaded from."""
+    if platform is None:
+        return texts.PHOTO_UNKNOWN
+
+    return texts.PHOTO_PLATFORM.format(platform=platform)
+
+
+def album_platform_line(platforms: Sequence[str | None]) -> str:
+    """What to say about the platforms the photos of an album were uploaded from.
+
+    Each platform is named once, in order; photos that match no header (or
+    could not be read) add "an unknown platform" last. Labels contain commas,
+    hence the semicolons.
+    """
+    named = list(dict.fromkeys(p for p in platforms if p is not None))
+
+    if not named:
+        return texts.ALBUM_UNKNOWN
+
+    if None in platforms:
+        named.append(texts.UNKNOWN_PLATFORM)
+
+    return texts.ALBUM_PLATFORMS.format(platforms="; ".join(named))
 
 
 def forward_origin(header: types.MessageFwdHeader, entity: object | None) -> str:

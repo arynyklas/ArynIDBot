@@ -5,7 +5,12 @@ import pytest
 from telethon.tl import types
 
 from src import texts
-from src.describe import document_kind, forward_origin, media_location
+from src.describe import (
+    album_platform_line,
+    document_kind,
+    forward_origin,
+    media_location,
+)
 
 _STICKER = types.DocumentAttributeSticker(
     alt="🙂", stickerset=types.InputStickerSetEmpty()
@@ -75,6 +80,28 @@ def test_the_dc_of_a_photo_or_document_is_reported():
 )
 def test_media_without_a_file_has_no_dc(media):
     assert media_location(media) is None
+
+
+@pytest.mark.parametrize(
+    ("platforms", "named"),
+    [
+        (["iOS", "iOS", "iOS"], "iOS"),
+        (
+            ["Android", "Desktop Linux, Unigram, Generic", "Android"],
+            "Android; Desktop Linux, Unigram, Generic",
+        ),
+        ([None, "iOS", None], f"iOS; {texts.UNKNOWN_PLATFORM}"),
+    ],
+    ids=["one-platform", "two-platforms", "partly-unknown"],
+)
+def test_an_album_names_each_platform_once(platforms, named):
+    assert album_platform_line(platforms) == texts.ALBUM_PLATFORMS.format(
+        platforms=named
+    )
+
+
+def test_an_album_of_unknown_platforms_says_so():
+    assert album_platform_line([None, None]) == texts.ALBUM_UNKNOWN
 
 
 def _header(**fields: Any) -> types.MessageFwdHeader:

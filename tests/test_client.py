@@ -60,7 +60,7 @@ async def test_a_dead_file_sender_is_reconnected_by_telethons_own_borrow(
     logger, monkeypatch
 ):
     """Telethon hands a cached per-DC sender out without checking that it is
-    connected, so one that gave up made every later voice probe on its DC fail.
+    connected, so one that gave up made every later probe of a file on its DC fail.
 
     This drives the real `_borrow_exported_sender`, so a Telethon upgrade that
     changes the contract the fix relies on fails here.
