@@ -67,8 +67,8 @@ Exit codes: `0` clean shutdown (SIGINT, SIGTERM); `1` configuration or startup f
 
 ```ini
 [Service]
-WorkingDirectory=/root/ArynIDBot
-ExecStart=/root/ArynIDBot/.venv/bin/python -m src.main
+WorkingDirectory=/opt/ArynIDBot
+ExecStart=/opt/ArynIDBot/.venv/bin/python -m src.main
 Environment=PYTHONUNBUFFERED=1 PYTHONUTF8=1
 Restart=on-failure
 RestartSec=10
