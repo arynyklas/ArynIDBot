@@ -1,0 +1,40 @@
+# yaml-language-server: $schema=./config.schema.json
+bot:
+  api_id: 1234
+  api_hash: "1234"
+  token: "1234:abcd"
+  session_path: sessions/bot.session
+  flood_sleep_threshold: 60
+
+# Omit this section, or set `url` to `null`, to run without the rating.
+database:
+  url: mongodb://user:password@localhost:27017
+  name: ArynIDBot
+  timeout: 2.0
+
+inline:
+  cache_time: 3600
+
+rating:
+  size: 10
+  refresh_interval: 10.0
+
+limits:
+  user_burst: 8
+  user_interval: 2.0
+  chat_burst: 3
+  chat_interval: 3.0
+  inline_burst: 20
+  inline_interval: 0.5
+  voice_probes: 4
+  voice_probe_timeout: 20.0
+
+logging:
+  telethon_level: WARNING
+  console:
+    level: INFO
+  file:
+    level: INFO
+    path: logs/main.log
+    max_bytes: 10485760
+    backup_count: 5

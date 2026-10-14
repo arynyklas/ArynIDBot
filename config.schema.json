@@ -1,0 +1,232 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$comment": "Generated from src/config.py by `uv run python -m scripts.generate_config_schema`.",
+  "title": "Config",
+  "description": "ArynIDBot configuration.",
+  "type": "object",
+  "properties": {
+    "bot": {
+      "description": "Bot account, logged in over MTProto.",
+      "type": "object",
+      "properties": {
+        "api_id": {
+          "description": "Telegram API ID from my.telegram.org.",
+          "type": "integer"
+        },
+        "api_hash": {
+          "description": "Telegram API hash matching `api_id`.",
+          "type": "string"
+        },
+        "token": {
+          "description": "Bot token from @BotFather.",
+          "type": "string"
+        },
+        "session_path": {
+          "description": "Telethon session file. It stays bound to the bot that first logged in with it: delete it after changing `token`.",
+          "type": "string",
+          "default": "sessions/bot.session"
+        },
+        "flood_sleep_threshold": {
+          "description": "Flood waits shorter than this many seconds are slept through by Telethon.",
+          "type": "integer",
+          "default": 60
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "api_id",
+        "api_hash",
+        "token"
+      ]
+    },
+    "database": {
+      "description": "MongoDB storage of the inline message ID rating; off unless `url` is set.",
+      "type": "object",
+      "properties": {
+        "url": {
+          "description": "MongoDB connection string; `null` turns the rating off.",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "name": {
+          "description": "Database name.",
+          "type": "string",
+          "default": "ArynIDBot"
+        },
+        "timeout": {
+          "description": "Seconds a database call waits for a reachable server before it fails.",
+          "type": "number",
+          "default": 2.0
+        }
+      },
+      "additionalProperties": false
+    },
+    "inline": {
+      "description": "Inline mode.",
+      "type": "object",
+      "properties": {
+        "cache_time": {
+          "description": "Seconds Telegram may serve the inline result from its cache.",
+          "type": "integer",
+          "minimum": 0,
+          "default": 3600
+        }
+      },
+      "additionalProperties": false
+    },
+    "rating": {
+      "description": "Rating of users by the message ID their inline message got.",
+      "type": "object",
+      "properties": {
+        "size": {
+          "description": "Users listed by /start and /top.",
+          "type": "integer",
+          "minimum": 1,
+          "default": 10
+        },
+        "refresh_interval": {
+          "description": "Seconds a read rating is reused before the database is asked again.",
+          "type": "number",
+          "minimum": 0,
+          "default": 10.0
+        }
+      },
+      "additionalProperties": false
+    },
+    "limits": {
+      "description": "Flood protection.",
+      "type": "object",
+      "properties": {
+        "user_burst": {
+          "description": "Requests one user may make back to back: messages (an album counts once), commands, chosen inline results and button presses. Inline queries have a budget of their own.",
+          "type": "integer",
+          "minimum": 1,
+          "default": 8
+        },
+        "user_interval": {
+          "description": "Seconds for a user to earn one request back. A user over budget is told once when to retry, then ignored until then.",
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "default": 2.0
+        },
+        "chat_burst": {
+          "description": "Messages the bot may post to one group back to back.",
+          "type": "integer",
+          "minimum": 1,
+          "default": 3
+        },
+        "chat_interval": {
+          "description": "Seconds for a group to earn one message back; over budget the bot stays silent there.",
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "default": 3.0
+        },
+        "inline_burst": {
+          "description": "Inline queries one user may send back to back. Clients send one per keystroke, and Telegram answers a repeated query text from its cache without asking the bot.",
+          "type": "integer",
+          "minimum": 1,
+          "default": 20
+        },
+        "inline_interval": {
+          "description": "Seconds for a user to earn one inline query back. A query over budget gets no answer, so the client shows no results.",
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "default": 0.5
+        },
+        "voice_probes": {
+          "description": "Voice messages whose first 4 KiB are downloaded at once, across all users.",
+          "type": "integer",
+          "minimum": 1,
+          "default": 4
+        },
+        "voice_probe_timeout": {
+          "description": "Seconds a voice probe may take, waiting for a free slot included.",
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "default": 20.0
+        }
+      },
+      "additionalProperties": false
+    },
+    "logging": {
+      "description": "Log levels and destinations.",
+      "type": "object",
+      "properties": {
+        "telethon_level": {
+          "description": "Level of Telethon's own loggers, kept apart from ours; `DEBUG` to debug MTProto.",
+          "enum": [
+            "DEBUG",
+            "INFO",
+            "WARNING",
+            "ERROR",
+            "CRITICAL"
+          ],
+          "default": "WARNING"
+        },
+        "console": {
+          "description": "Console log output.",
+          "type": "object",
+          "properties": {
+            "level": {
+              "description": "Console log level.",
+              "enum": [
+                "DEBUG",
+                "INFO",
+                "WARNING",
+                "ERROR",
+                "CRITICAL"
+              ],
+              "default": "INFO"
+            }
+          },
+          "additionalProperties": false
+        },
+        "file": {
+          "description": "Rotating log file.",
+          "type": "object",
+          "properties": {
+            "level": {
+              "description": "File log level.",
+              "enum": [
+                "DEBUG",
+                "INFO",
+                "WARNING",
+                "ERROR",
+                "CRITICAL"
+              ],
+              "default": "INFO"
+            },
+            "path": {
+              "description": "Log file path.",
+              "type": "string",
+              "default": "logs/main.log"
+            },
+            "max_bytes": {
+              "description": "Size at which the log file is rotated, in bytes.",
+              "type": "integer",
+              "default": 10485760
+            },
+            "backup_count": {
+              "description": "Number of rotated log files kept.",
+              "type": "integer",
+              "default": 5
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "bot"
+  ]
+}
