@@ -90,7 +90,7 @@ class RatingConfig:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class LimitsConfig:
-    """Flood protection: request budgets per user and per group, and the voice probe budget."""
+    """Flood protection: request budgets per user and per group, and the media probe budget."""
 
     user_burst: Annotated[int, V >= 1] = 8
     """Requests one user may make back to back: messages (an album counts once), commands, chosen inline results and button presses. Inline queries have a budget of their own."""
@@ -104,10 +104,10 @@ class LimitsConfig:
     """Inline queries one user may send back to back. Clients send one per keystroke, and Telegram answers a repeated query text from its cache without asking the bot."""
     inline_interval: Annotated[float, V > 0] = 0.5
     """Seconds for a user to earn one inline query back. A query over budget gets no answer, so the client shows no results."""
-    voice_probes: Annotated[int, V >= 1] = 4
-    """Voice messages whose first 4 KiB are downloaded at once, across all users."""
-    voice_probe_timeout: Annotated[float, V > 0] = 20.0
-    """Seconds a voice probe may take, waiting for a free slot included."""
+    media_probes: Annotated[int, V >= 1] = 4
+    """Voice messages and photos whose first 4 KiB are downloaded at once, across all users."""
+    media_probe_timeout: Annotated[float, V > 0] = 20.0
+    """Seconds a voice message or photo probe may take, waiting for a free slot included."""
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

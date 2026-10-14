@@ -140,14 +140,14 @@
           "exclusiveMinimum": 0,
           "default": 0.5
         },
-        "voice_probes": {
-          "description": "Voice messages whose first 4 KiB are downloaded at once, across all users.",
+        "media_probes": {
+          "description": "Voice messages and photos whose first 4 KiB are downloaded at once, across all users.",
           "type": "integer",
           "minimum": 1,
           "default": 4
         },
-        "voice_probe_timeout": {
-          "description": "Seconds a voice probe may take, waiting for a free slot included.",
+        "media_probe_timeout": {
+          "description": "Seconds a voice message or photo probe may take, waiting for a free slot included.",
           "type": "number",
           "exclusiveMinimum": 0,
           "default": 20.0

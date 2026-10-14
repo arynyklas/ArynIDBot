@@ -1,6 +1,6 @@
 # ArynIDBot
 
-[@ArynIDBot](https://t.me/ArynIDBot) shows the IDs Telegram keeps out of sight: users, bots, channels, groups and messages, plus where media is stored, who owns a sticker pack and which app recorded a voice message.
+[@ArynIDBot](https://t.me/ArynIDBot) shows the IDs Telegram keeps out of sight: users, bots, channels, groups and messages, plus where media is stored, who owns a sticker pack, which app recorded a voice message and which platform a photo was uploaded from.
 
 **Note:** This project runs on Python 3.13 (pinned in `.python-version`) with [uv](https://docs.astral.sh/uv/).
 
@@ -23,6 +23,7 @@ Send or forward anything to the bot in a private chat; it replies with what the 
   | `telegram-web-a` | Telegram Web A |
 
   Any other vendor string is shown as is.
+- **Photo platform.** Telegram keeps the JPEG header that the uploading app wrote (JFIF density, ICC profile, quantization tables) in a photo's large size, and apps write it differently. The bot downloads the first 4 KiB of the size Telegram Desktop opens in its media viewer (the biggest progressive size, else the first of types `y`, `d`, `x`, `c`, `w`, `m`, `b`, `s`, `a`) and matches the header against [materialgram's table](https://github.com/kukuruzka165/materialgram/blob/main/Telegram/SourceFiles/media/view/media_view_overlay_widget.cpp), whose labels it shows: `iOS`, `Android`, `macOS` (Telegram for macOS), `Desktop Windows`, `Desktop macOS` and `Desktop Linux` (Telegram Desktop), and `Desktop Linux, Unigram, Generic` for a plain header that several apps write; `, 2`, `, 3`, `, old` and `, Share menu` mark other headers seen from the same platform. An album gets one line naming each platform once. Images sent as files are not checked.
 - **Media DC.** The data center storing a photo, video, voice message, sticker or file. An album gets one reply listing every file's DC.
 
 In groups the bot posts the group's ID when it is added and the old and new IDs when the group becomes a supergroup; `/id`, `/help` and `/top` work there too.
@@ -31,7 +32,7 @@ Inline mode (`@ArynIDBot` in any chat) sends a message that the bot then edits t
 
 ### Flood protection
 
-Every user has a request budget: `limits.user_burst` requests back to back, then one more every `limits.user_interval` seconds. Messages, commands, chosen inline results and button presses spend it, and an album counts once. The first refused request gets a reply saying when to retry, later ones are dropped silently until then. Inline queries have a budget of their own (`limits.inline_*`): clients send one per keystroke, and every new query text reaches the bot; a query over budget gets no answer, so the client simply shows no results. Each group has its own budget for the bot's messages there (`limits.chat_*`, sized to Telegram's 20 messages a minute per group); over it the bot stays silent. Voice probes are capped at `limits.voice_probes` downloads at a time with a timeout, and the vendors and custom emoji packs already seen are cached, so a forwarded voice message is downloaded once.
+Every user has a request budget: `limits.user_burst` requests back to back, then one more every `limits.user_interval` seconds. Messages, commands, chosen inline results and button presses spend it, and an album counts once. The first refused request gets a reply saying when to retry, later ones are dropped silently until then. Inline queries have a budget of their own (`limits.inline_*`): clients send one per keystroke, and every new query text reaches the bot; a query over budget gets no answer, so the client simply shows no results. Each group has its own budget for the bot's messages there (`limits.chat_*`, sized to Telegram's 20 messages a minute per group); over it the bot stays silent. Voice message and photo probes share `limits.media_probes` downloads at a time, each with a timeout, and the vendors, photo platforms and custom emoji packs found are cached, so a voice message or photo forwarded again is not downloaded again.
 
 ## Installation
 
@@ -116,8 +117,8 @@ CI runs the same commands, except that its `uv sync --locked` stands in for `uv 
 | `limits.chat_interval` | Number | `3.0` | Seconds for a group to earn one message back; over budget the bot stays silent there. |
 | `limits.inline_burst` | Integer | `20` | Inline queries one user may send back to back. Clients send one per keystroke, and Telegram answers a repeated query text from its cache without asking the bot. |
 | `limits.inline_interval` | Number | `0.5` | Seconds for a user to earn one inline query back. A query over budget gets no answer, so the client shows no results. |
-| `limits.voice_probes` | Integer | `4` | Voice messages whose first 4 KiB are downloaded at once, across all users. |
-| `limits.voice_probe_timeout` | Number | `20.0` | Seconds a voice probe may take, waiting for a free slot included. |
+| `limits.media_probes` | Integer | `4` | Voice messages and photos whose first 4 KiB are downloaded at once, across all users. |
+| `limits.media_probe_timeout` | Number | `20.0` | Seconds a voice message or photo probe may take, waiting for a free slot included. |
 | `logging.telethon_level` | One of `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL` | `"WARNING"` | Level of Telethon's own loggers, kept apart from ours; `DEBUG` to debug MTProto. |
 | `logging.console.level` | One of `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL` | `"INFO"` | Console log level. |
 | `logging.file.level` | One of `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL` | `"INFO"` | File log level. |
@@ -131,3 +132,4 @@ CI runs the same commands, except that its `uv sync --locked` stands in for `uv 
 - [@teleX](https://t.me/teleX) and [@DavideGalilei](https://t.me/DavideGalilei), credited by [SPOwnerBot](https://github.com/arynyklas/SPOwnerBot), whose sticker set owner decoding this bot uses.
 - [@madrik1337](https://t.me/madrik1337), who fixed that owner ID decoding in [SPOwnerBot#1](https://github.com/arynyklas/SPOwnerBot/pull/1).
 - [Чекист 42](https://t.me/chekist42/503) for the table of voice message encoders.
+- [kukuruzka165](https://github.com/kukuruzka165)'s [materialgram](https://github.com/kukuruzka165/materialgram) for the table of photo headers.

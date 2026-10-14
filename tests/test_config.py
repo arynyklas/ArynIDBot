@@ -65,7 +65,7 @@ def test_integers_are_accepted_for_float_fields(config_file):
         ("limits.user_burst", 0, "greater than or equal to 1"),
         ("limits.user_interval", 0, "greater than 0"),
         ("limits.chat_interval", True, "expected a number, got bool"),
-        ("limits.voice_probes", 0, "greater than or equal to 1"),
+        ("limits.media_probes", 0, "greater than or equal to 1"),
         ("logging.console.level", "debug", "Invalid variant"),
     ],
 )

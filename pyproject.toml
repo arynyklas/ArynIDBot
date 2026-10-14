@@ -1,7 +1,7 @@
 [project]
 name = "aryn-id-bot"
 version = "2.0.0"
-description = "Telegram bot that shows IDs: users, chats, messages, media DCs, sticker pack owners and voice platforms"
+description = "Telegram bot that shows IDs: users, chats, messages, media DCs, sticker pack owners, and voice and photo platforms"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [

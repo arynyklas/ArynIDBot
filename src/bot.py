@@ -17,9 +17,16 @@ from src import constants, texts
 from src.cache import LruCache
 from src.client import AUTH_ERRORS, revive_dead_file_senders
 from src.config import Config
-from src.describe import forward_origin, media_location
+from src.describe import (
+    album_platform_line,
+    forward_origin,
+    media_location,
+    message_photo,
+    photo_platform_line,
+)
 from src.inline import inline_message_location
 from src.limiter import RateLimiter
+from src.photo import large_size, photo_platform
 from src.rating import Rating
 from src.stickers import decode_set_id, sticker_set_id
 from src.voice import opus_vendor, voice_platform
@@ -55,8 +62,9 @@ class IdBot:
         self._inline_queries = RateLimiter(
             cfg.limits.inline_burst, cfg.limits.inline_interval
         )
-        self._probes = asyncio.Semaphore(cfg.limits.voice_probes)
+        self._probes = asyncio.Semaphore(cfg.limits.media_probes)
         self._vendors: LruCache[int, str] = LruCache(constants.CACHE_SIZE)
+        self._photo_platforms: LruCache[int, str] = LruCache(constants.CACHE_SIZE)
         self._emoji_sets: LruCache[int, int] = LruCache(constants.CACHE_SIZE)
         self._inline_buttons = [
             Button.inline(texts.INLINE_BUTTON, texts.INLINE_BUTTON_DATA)
@@ -202,6 +210,16 @@ class IdBot:
             return
 
         lines = [self._origin(first)]
+        photos = [
+            photo
+            for message in messages
+            if (photo := message_photo(message.media)) is not None
+        ]
+
+        if photos:
+            platforms = await asyncio.gather(*map(self._photo_platform, photos))
+            lines.append(album_platform_line(platforms))
+
         dc_ids = [
             location[1]
             for message in messages
@@ -327,6 +345,11 @@ class IdBot:
             if message.voice is not None:
                 lines.append(await self._voice_platform(document))
 
+        photo = message_photo(media)
+
+        if photo is not None:
+            lines.append(photo_platform_line(await self._photo_platform(photo)))
+
         lines += await self._emoji_owners(message)
 
         location = media_location(media)
@@ -341,19 +364,8 @@ class IdBot:
         vendor = self._vendors.get(document.id)
 
         if vendor is None:
-            try:
-                async with asyncio.timeout(self._cfg.limits.voice_probe_timeout):
-                    async with self._probes:
-                        head = await self._download_head(document)
-
-            # TimeoutError and ConnectionError are OSErrors; Telethon raises a
-            # ValueError for a file served from a CDN, which bots cannot reach.
-            except (OSError, ValueError, errors.RPCError) as ex:
-                self._logger.warning("Voice %d not probed: %r", document.id, ex)
-
-                return texts.VOICE_UNREADABLE
-
-            vendor = opus_vendor(head)
+            head = await self._probe(document, document.dc_id, f"Voice {document.id}")
+            vendor = None if head is None else opus_vendor(head)
 
             if vendor is None:
                 return texts.VOICE_UNREADABLE
@@ -368,12 +380,59 @@ class IdBot:
 
         return texts.VOICE_PLATFORM.format(platform=platform, vendor=shown)
 
-    async def _download_head(self, document: types.Document) -> bytes:
+    async def _photo_platform(self, photo: types.Photo) -> str | None:
+        """The platform the photo was uploaded from; `None` if unknown or unread."""
+        platform = self._photo_platforms.get(photo.id)
+
+        if platform is not None:
+            return platform
+
+        size = large_size(photo.sizes)
+
+        if size is None:
+            return None
+
+        location = types.InputPhotoFileLocation(
+            id=photo.id,
+            access_hash=photo.access_hash,
+            file_reference=photo.file_reference,
+            thumb_size=size.type,
+        )
+        head = await self._probe(location, photo.dc_id, f"Photo {photo.id}")
+        platform = None if head is None else photo_platform(head)
+
+        if platform is not None:
+            self._photo_platforms.put(photo.id, platform)
+
+        return platform
+
+    async def _probe(
+        self,
+        file: types.Document | types.InputPhotoFileLocation,
+        dc_id: int,
+        name: str,
+    ) -> bytes | None:
+        """The first block of the file; `None` if it could not be downloaded in time."""
+        try:
+            async with asyncio.timeout(self._cfg.limits.media_probe_timeout):
+                async with self._probes:
+                    return await self._download_head(file, dc_id)
+
+        # TimeoutError and ConnectionError are OSErrors; Telethon raises a
+        # ValueError for a file served from a CDN, which bots cannot reach.
+        except (OSError, ValueError, errors.RPCError) as ex:
+            self._logger.warning("%s not probed: %r", name, ex)
+
+            return None
+
+    async def _download_head(
+        self, file: types.Document | types.InputPhotoFileLocation, dc_id: int
+    ) -> bytes:
         """The first block of the file: one `upload.getFile`, on the file's own DC."""
         revive_dead_file_senders(self._client, self._logger)
 
         async with self._client.iter_download(
-            document, request_size=constants.VOICE_HEAD_SIZE, limit=1
+            file, request_size=constants.PROBE_HEAD_SIZE, limit=1, dc_id=dc_id
         ) as stream:
             async for chunk in stream:
                 return cast("bytes", chunk)
