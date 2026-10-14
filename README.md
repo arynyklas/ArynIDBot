@@ -129,4 +129,5 @@ CI runs the same commands, except that its `uv sync --locked` stands in for `uv 
 ## Thanks
 
 - [@teleX](https://t.me/teleX) and [@DavideGalilei](https://t.me/DavideGalilei), credited by [SPOwnerBot](https://github.com/arynyklas/SPOwnerBot), whose sticker set owner decoding this bot uses.
+- [@madrik1337](https://t.me/madrik1337), who fixed that owner ID decoding in [SPOwnerBot#1](https://github.com/arynyklas/SPOwnerBot/pull/1).
 - [Чекист 42](https://t.me/chekist42/503) for the table of voice message encoders.

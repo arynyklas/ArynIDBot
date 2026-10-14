@@ -4,7 +4,11 @@ from telethon.tl import types
 
 
 def decode_set_id(set_id: int) -> tuple[int, int]:
-    """Returns `(owner user ID, owner's set increment ID)`."""
+    """Returns `(owner user ID, owner's set increment ID)`.
+
+    Ported from SPOwnerBot, where @madrik1337 fixed the owner ID decoding
+    (https://github.com/arynyklas/SPOwnerBot/pull/1).
+    """
 
     # set id = (owner & 0x7FFFFFFF) << 32 | ~((owner >> 31) << 22 | set_increment_id)
     #
