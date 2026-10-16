@@ -1,15 +1,41 @@
+from datetime import UTC, datetime
+import json
 import logging
 from logging.handlers import RotatingFileHandler
+import sys
 
 from src import constants
 from src.config import LoggingConfig
 
+# Attributes every LogRecord has; anything else came in through `extra`.
+_STANDARD_ATTRS = frozenset(
+    vars(logging.LogRecord("", 0, "", 0, "", None, None)).keys()
+) | {"message", "asctime", "taskName"}
 
-class StrippingFormatter(logging.Formatter):
+
+class JsonFormatter(logging.Formatter):
+    """One JSON object per line: ts, level, logger, msg, exc, extras."""
+
     def format(self, record: logging.LogRecord) -> str:
-        record.msg = record.msg.strip() if isinstance(record.msg, str) else record.msg
+        message = record.getMessage()
+        ts = datetime.fromtimestamp(record.created, tz=UTC)
+        payload: dict[str, object] = {
+            "ts": ts.isoformat(timespec="milliseconds").replace("+00:00", "Z"),
+            "level": record.levelname,
+            "logger": record.name,
+            "msg": message.strip(),
+        }
 
-        return super().format(record)
+        if record.exc_info:
+            payload["exc"] = self.formatException(record.exc_info)
+        elif record.exc_text:
+            payload["exc"] = record.exc_text
+
+        for key, value in vars(record).items():
+            if key not in _STANDARD_ATTRS and key not in payload:
+                payload[key] = value
+
+        return json.dumps(payload, ensure_ascii=False, default=str)
 
 
 _LEVELS = logging.getLevelNamesMapping()
@@ -26,11 +52,9 @@ def get_logger(name: str, cfg: LoggingConfig) -> logging.Logger:
 
     logger.setLevel(min(console_level, file_level))
 
-    formatter = StrippingFormatter(
-        "%(asctime)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s"
-    )
+    formatter = JsonFormatter()
 
-    console_handler = logging.StreamHandler()
+    console_handler = logging.StreamHandler(stream=sys.stdout)
     console_handler.setLevel(console_level)
     console_handler.setFormatter(formatter)
 
