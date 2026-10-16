@@ -1,0 +1,74 @@
+name: arynidbot
+
+# Capped: the default json-file log grows without bound.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "3"
+
+services:
+  bot:
+    build:
+      context: .
+      # Off: some builders attach a provenance attestation that differs on
+      # every build, and with it the image ID, so `up` would recreate an
+      # unchanged container. Compose 5.1 ignores a plain `false`.
+      provenance: "disabled=true"
+    image: arynidbot
+    # Every `up` rebuilds the image (from cache when nothing changed), so
+    # `git pull && docker compose up -d` cannot leave the old code running.
+    pull_policy: build
+    restart: unless-stopped
+    volumes:
+      - type: bind
+        # Production points this at the host-rendered secret file.
+        source: ${ARYNIDBOT_CONFIG:-./config.yaml}
+        target: /app/config.yaml
+        read_only: true
+        bind:
+          # On Linux a missing config.yaml fails `up` instead of turning into
+          # a directory (Docker Desktop creates one regardless).
+          create_host_path: false
+      - sessions:/app/sessions
+      - logs:/app/logs
+    # The bot writes only to its volumes; SQLite may spill to /tmp.
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    logging: *logging
+    depends_on:
+      mongo:
+        condition: service_healthy
+        # Only with the `mongo` profile on.
+        required: false
+
+  # MongoDB for the rating, with the `mongo` profile on; the bot's
+  # `database.url` is then mongodb://mongo:27017. It publishes no port, so only
+  # the project's network reaches it. MongoDB 5.0+ needs a CPU with AVX, which
+  # Proxmox's default kvm64 CPU type lacks: mongod dies with "Illegal
+  # instruction" there.
+  mongo:
+    image: mongo:8.0
+    profiles:
+      - mongo
+    restart: unless-stopped
+    volumes:
+      - mongo:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+      start_interval: 1s
+    logging: *logging
+
+volumes:
+  sessions:
+  logs:
+  mongo:

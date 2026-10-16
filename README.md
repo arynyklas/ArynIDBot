@@ -78,6 +78,46 @@ RestartPreventExitStatus=2
 
 `config.yaml` holds the API hash, the bot token and the database password, and the session file is the bot's login: on POSIX run `chmod 600 config.yaml` (the bot narrows the session file and its directory itself).
 
+## Docker
+
+`compose.yaml` builds an image from the checkout and runs the bot in it. With `config.yaml` written and @BotFather set up as in [Installation](#installation):
+
+```sh
+docker compose up -d
+docker compose logs -f bot
+```
+
+The image runs on distroless `gcr.io/distroless/cc-debian13` with uv's standalone CPython 3.13 under `/python`: there is no shell, so `docker compose exec bot sh` does not work. The bot runs as UID 10001 on a read-only filesystem and reads `config.yaml` through a read-only mount (set `ARYNIDBOT_CONFIG` to mount another file), so on Linux give that user read access: `sudo chgrp 10001 config.yaml && chmod 640 config.yaml`. The session and the log file go to the `sessions` and `logs` volumes, which outlive the container (`docker compose down -v` deletes them): keep `bot.session_path` under `sessions/` and `logging.file.path` under `logs/`, as the defaults do. Logs are JSON, one object per line (`ts`, `level`, `logger`, `msg`, `exc`), on stdout and in the log file.
+
+- **Updating.** `git pull && docker compose up -d`: every `up` rebuilds the image, from cache if nothing changed, and recreates the container only if the image changed. Base images are pinned by digest and bumped by Dependabot. A changed `config.yaml` takes effect once the container is recreated, `docker compose up -d --force-recreate bot`; a plain restart also works on Linux, but Docker Desktop can fail to remount a file that an editor saved by replacing it.
+- **Restarts.** Docker stops the container with SIGINT, a clean shutdown even while the bot is still connecting. Unless stopped by hand, the container restarts whenever the bot exits, also after a reboot. Docker has no `RestartPreventExitStatus`: with a revoked token the bot keeps failing, retried with a delay that doubles up to a minute, and `docker compose ps` shows `Restarting (2)`.
+- **MongoDB.** `localhost` in `database.url` is the container itself. For local development, put `COMPOSE_PROFILES=mongo` into `.env`, so that every `docker compose` command includes it, and set `database.url: mongodb://mongo:27017`; it publishes no port and keeps its data in the `mongo` volume. In production the bot instead joins an external Docker network that hosts a shared MongoDB, wired in a host-side `compose.override.yaml` (gitignored) that Compose merges in, with `database.url: mongodb://<user>:<pass>@mongodb:27017/<db>?authSource=<db>`:
+
+    ```yaml
+    services:
+      bot:
+        networks: [default, <shared-network>]
+    networks:
+      <shared-network>:
+        external: true
+    ```
+
+    with `ARYNIDBOT_CONFIG=/run/secrets/<name>/config.yaml` in `.env` or the environment of the `docker compose` call, so the config arrives as a read-only file mount, never through `environment:`.
+
+- **Session.** The image has no shell or `rm`, so session files are handled from a throwaway helper container on the `sessions` volume (named `arynidbot_sessions`). After changing `bot.token`, delete the old session:
+
+    ```sh
+    docker compose stop bot
+    docker run --rm -v arynidbot_sessions:/s busybox rm /s/bot.session
+    ```
+
+    To move an install to Docker with its login and update state, stop the old bot for good (a clean stop saves the state) and copy its session in from its checkout:
+
+    ```sh
+    docker compose stop bot
+    docker run --rm -i -v arynidbot_sessions:/s busybox sh -c 'umask 077 && cat > /s/bot.session && chown 10001:10001 /s/bot.session' < sessions/bot.session
+    ```
+
 ## Development
 
 ```sh
@@ -89,7 +129,7 @@ uv run pytest
 uv lock --check
 ```
 
-CI runs the same commands, except that its `uv sync --locked` stands in for `uv lock --check`. The type-check job is advisory: it is marked `continue-on-error` while `ty` is pre-1.0, so a green CI run does not mean the type check passed.
+CI runs the same commands, except that its `uv sync --locked` stands in for `uv lock --check`; it also validates `compose.yaml`, builds the Docker image and runs `--help` in it. The type-check job is advisory: it is marked `continue-on-error` while `ty` is pre-1.0, so a green CI run does not mean the type check passed.
 
 `config.schema.json` and the key table under [Configuration](#configuration) are generated from `src/config.py`; run `uv run python -m scripts.generate_config_schema` after changing it. The pre-commit hook does this, and the tests fail while either file is stale.
 
