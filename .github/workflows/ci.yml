@@ -94,6 +94,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The runner's Compose predates `build.provenance`, which compose.yaml uses.
+      - uses: docker/setup-compose-action@v1
+        with:
+          version: latest
+
       - name: Validate compose.yaml
         run: docker compose config --quiet
 
