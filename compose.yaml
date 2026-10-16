@@ -22,7 +22,8 @@ services:
     restart: unless-stopped
     volumes:
       - type: bind
-        source: ./config.yaml
+        # Production points this at the host-rendered secret file.
+        source: ${ARYNIDBOT_CONFIG:-./config.yaml}
         target: /app/config.yaml
         read_only: true
         bind:
