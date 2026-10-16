@@ -53,7 +53,7 @@ services:
   # Proxmox's default kvm64 CPU type lacks: mongod dies with "Illegal
   # instruction" there.
   mongo:
-    image: mongo:8.0
+    image: mongo:8.2
     profiles:
       - mongo
     restart: unless-stopped
