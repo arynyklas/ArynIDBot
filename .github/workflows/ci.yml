@@ -86,3 +86,19 @@ jobs:
 
       - name: Run tests
         run: uv run pytest
+
+  docker:
+    name: Docker image
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate compose.yaml
+        run: docker compose config --quiet
+
+      - name: Build image
+        run: docker build --tag arynidbot .
+
+      - name: Smoke test
+        run: docker run --rm arynidbot --help

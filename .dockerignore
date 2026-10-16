@@ -1,0 +1,8 @@
+# Only what the image needs: config.yaml (the bot token) and session files
+# never enter the build context.
+*
+!src
+!pyproject.toml
+!uv.lock
+!.python-version
+**/__pycache__
