@@ -131,6 +131,8 @@ uv lock --check
 
 CI runs the same commands, except that its `uv sync --locked` stands in for `uv lock --check`; it also validates `compose.yaml`, builds the Docker image and runs `--help` in it. The type-check job is advisory: it is marked `continue-on-error` while `ty` is pre-1.0, so a green CI run does not mean the type check passed.
 
+Security maintenance (2026-11-03): `uv.lock` upgrades the `pre-commit` development dependencies `filelock` to 4.2.7 and `virtualenv` to 21.15.2, covering Dependabot alerts #1–#28 (patched floors: 4.2.1 and 21.14.9 respectively). Bot runtime dependencies are unchanged.
+
 `config.schema.json` and the key table under [Configuration](#configuration) are generated from `src/config.py`; run `uv run python -m scripts.generate_config_schema` after changing it. The pre-commit hook does this, and the tests fail while either file is stale.
 
 ## Configuration
