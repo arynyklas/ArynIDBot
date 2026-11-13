@@ -95,7 +95,7 @@ jobs:
       - uses: actions/checkout@v4
 
       # The runner's Compose predates `build.provenance`, which compose.yaml uses.
-      - uses: docker/setup-compose-action@v1
+      - uses: docker/setup-compose-action@v2
         with:
           version: latest
 
