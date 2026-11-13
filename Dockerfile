@@ -28,7 +28,7 @@ RUN /app/.venv/bin/python -m compileall -q src && mkdir /state
 
 # gcr.io/distroless/cc-debian13:latest (multi-arch index digest): glibc and
 # libssl, no shell.
-FROM gcr.io/distroless/cc-debian13:latest@sha256:159783207c2cd44c2aa5715961d13c8612368ac9bd450f887e3f08fc8ea461e3
+FROM gcr.io/distroless/cc-debian13:latest@sha256:e530497a861b56fc224f1b37078215dd8ec1f241285ccbc922e179aefe8600f1
 
 # Telethon loads libssl through ctypes.util.find_library(), which parses
 # `ldconfig -p`; this image has neither ldconfig nor its cache.
